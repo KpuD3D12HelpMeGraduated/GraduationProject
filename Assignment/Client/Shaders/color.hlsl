@@ -19,6 +19,8 @@ SamplerState gsamLinearClamp      : register(s3);
 SamplerState gsamAnisotropicWrap  : register(s4);
 SamplerState gsamAnisotropicClamp : register(s5);
 
+static float4 test = float4(1.f, 1.f, 1.f, 1.f );
+
 struct VertexIn
 {
 	float3 PosL  : POSITION;
@@ -32,6 +34,24 @@ struct VertexOut
     float4 Color : NORMAL;
 	float2 TexC : TEXCOORD;
 };
+
+
+float4 Lighting(VertexOut pin) {
+	//단위벡터어로 맹글어
+	float3 vCameraPosition = float3(1.f, 1.f, 1.f);
+	//월드좌표 = 카메라 좌표 겟또
+	vCameraPosition = mul(float4(vCameraPosition,1.f), gWorldViewProj);
+
+	//이게 최종적인 현재 색상
+	float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pin.TexC);
+
+	//
+	float4 cColor = float4(0.0f, 0.0f, 0.0f, 0.0f);
+
+
+	return diffuseAlbedo;
+
+}
 
 VertexOut VS(VertexIn vin)
 {
@@ -51,8 +71,19 @@ VertexOut VS(VertexIn vin)
 
 float4 PS(VertexOut pin) : SV_Target
 {
-	float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pin.TexC);
-	return diffuseAlbedo;
+	//
+	//float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pin.TexC);
+	
+	//노말벡터 정규화
+	pin.Color = normalize(pin.Color);
+
+	//위치, 정규화된 노멀, 텍스쳐까지 넘김
+	float4 tmp = Lighting(pin);
+
+	
+	
+	return tmp;
+	//return diffuseAlbedo;
 	//return pin.Color;
 }
 
