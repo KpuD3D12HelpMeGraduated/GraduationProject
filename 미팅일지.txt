@@ -102,3 +102,30 @@
  - 다중 접속 위치 동기화 (서버)
  - Ambient Color를 Diffuse Color로 대체해서 Directional Lighting 구현
  - Git 통합후 기획서/미션 수행내용 다 git에 올리기.
+
+2022-09-27
+------------
+1. 기획
+ - 
+
+2. 중점연구과제
+   (임해인) * Toon Shading => niro????,   O-toon shading같은 것을 구현해 보겠다.
+   (임해인) * Rendering Thread와 Logic Thread 분리  (했을 떄 안했을 때 속도차이가 2배나면 성공)
+   * Deffered Rendering : 수업시간에 알려줌.  다양한광원 : 그냥 구현하면 되는데 무엇이 어려운가?
+   (김덕현) * Desolve effect :   https://www.youtube.com/watch?v=uIthYMgWM0Q            Sord Trail : 칼 궤적그리기          Bloom : 광원 번지기,  Rim Light : 역광효과
+   * Navigation Mesh 생성 : 복잡한 지형을 만들고, NPC가 그 지형에서 navigation mesh를 통해 A*로 길을 찾아서 쫒아오면 되겠다.
+   (김경욱) 
+   * 스크립트를 사용한 보스 AI  (다양한 패턴 구현, 3마리의 보스)
+
+3. 기획
+ - 진전이 없음
+
+4. 다음미팅
+ - 10월 11일 화요일 오후 8시
+ - 주인공의 걷는 애니메이션
+ - 다중 접속 위치 동기화 (서버)  (클라이언트 수정 필요)
+ - Ambient Color를 Diffuse Color로 대체해서 Directional Lighting 구현
+ - Git 통합후 기획서/미션 수행내용 다 git에 올리기.
+ - 3D 엔진 프레임워크 리팩토링 :  다 좋은데, 리팩토링 한다고 다른 것을 아무것도 안하면 결국 시간낭비만 하고 아무것도 안되는 케이스를 너무 많이 보았다.
+          리팩토링은 별도로 진행하고 리팩토링이 완성되면 그때 기존것을 대체하자.  기존 엔진에 대한 작업은 계속한다.
+ - 보스 패턴 기획을 해오기. (1번보스)
