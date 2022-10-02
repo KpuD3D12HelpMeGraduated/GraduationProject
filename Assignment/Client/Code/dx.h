@@ -47,8 +47,148 @@ using namespace std;
 #endif
 
 #define CHARACTERINDEX 0
-#define PLAYERMAX 5
+#define PLAYERMAX 1
 #define OBJMAX 4
+
+struct Keyframe
+{
+	Keyframe() : TimePos(0.0f), Translation(0.0f, 0.0f, 0.0f), Scale(1.0f, 1.0f, 1.0f), RotationQuat(0.0f, 0.0f, 0.0f, 1.0f) { }
+
+	float TimePos;
+	DirectX::XMFLOAT3 Translation;
+	DirectX::XMFLOAT3 Scale;
+	DirectX::XMFLOAT4 RotationQuat;
+};
+
+struct BoneAnimation
+{
+	float GetStartTime()const;
+	float GetEndTime()const;
+
+	void Interpolate(float t, DirectX::XMFLOAT4X4& M)const;
+
+	std::vector<Keyframe> Keyframes;
+};
+
+struct AnimationClip
+{
+	float GetClipStartTime()const;
+	float GetClipEndTime()const;
+
+	void Interpolate(float t, std::vector<DirectX::XMFLOAT4X4>& boneTransforms)const;
+
+	std::vector<BoneAnimation> BoneAnimations;
+};
+
+class SkinnedData
+{
+public:
+
+	UINT BoneCount()const;
+
+	float GetClipStartTime(const std::string& clipName)const;
+	float GetClipEndTime(const std::string& clipName)const;
+
+	// In a real project, you'd want to cache the result if there was a chance
+	// that you were calling this several times with the same clipName at 
+	// the same timePos.
+	void GetFinalTransforms(const std::string& clipName, float timePos,
+		std::vector<DirectX::XMFLOAT4X4>& finalTransforms)const;
+
+	// Gives parentIndex of ith bone.
+	std::vector<int> mBoneHierarchy;
+
+	std::vector<DirectX::XMFLOAT4X4> mBoneOffsets;
+
+	std::unordered_map<std::string, AnimationClip> mAnimations;
+};
+
+struct SkinnedModelInstance
+{
+	SkinnedData* SkinnedInfo = nullptr;
+	std::vector<DirectX::XMFLOAT4X4> FinalTransforms;
+	std::string ClipName;
+	float TimePos = 0.0f;
+
+	std::vector<int> mBoneHierarchy;
+
+	std::vector<DirectX::XMFLOAT4X4> mBoneOffsets;
+
+	std::vector<AnimationClip> mAnimations;
+
+	// Called every frame and increments the time position, interpolates the 
+	// animations for each bone based on the current animation clip, and 
+	// generates the final transforms which are ultimately set to the effect
+	// for processing in the vertex shader.
+	void UpdateSkinnedAnimation(float dt)
+	{
+		TimePos += dt;
+
+		// Loop animation
+		if (TimePos > SkinnedInfo->GetClipEndTime(ClipName))
+			TimePos = 0.0f;
+
+		// Compute the final transforms for this time position.
+		SkinnedInfo->GetFinalTransforms(ClipName, TimePos, FinalTransforms);
+	}
+};
+
+struct SkinnedConstants
+{
+	DirectX::XMFLOAT4X4 BoneTransforms[96];
+};
+
+struct FbxKeyFrameInfo
+{
+	FbxAMatrix  matTransform;
+	double		time;
+};
+
+struct FbxAnimClipInfo
+{
+	wstring			name;
+	FbxTime			startTime;
+	FbxTime			endTime;
+	FbxTime::EMode	mode;
+	vector<vector<FbxKeyFrameInfo>>	keyFrames;
+};
+
+struct BoneWeight
+{
+	using Pair = pair<int, double>;
+	vector<Pair> boneWeights;
+
+	void AddWeights(UINT index, double weight)
+	{
+		if (weight <= 0.f)
+			return;
+
+		auto findIt = std::find_if(boneWeights.begin(), boneWeights.end(),
+			[=](const Pair& p) { return p.second < weight; });
+
+		if (findIt != boneWeights.end())
+			boneWeights.insert(findIt, Pair(index, weight));
+		else
+			boneWeights.push_back(Pair(index, weight));
+
+		if (boneWeights.size() > 4)
+			boneWeights.pop_back();
+	}
+
+	void Normalize()
+	{
+		double sum = 0.f;
+		std::for_each(boneWeights.begin(), boneWeights.end(), [&](Pair& p) { sum += p.second; });
+		std::for_each(boneWeights.begin(), boneWeights.end(), [=](Pair& p) { p.second = p.second / sum; });
+	}
+};
+
+struct FbxBoneInfo
+{
+	wstring					boneName;
+	int					  parentIndex;
+	FbxAMatrix				matOffset;
+};
 
 struct MeshData
 {
@@ -141,6 +281,15 @@ public:
 	bool LoadScene(FbxManager* pManager, FbxDocument* pScene, const char* pFilename);
 	void DisplayContent(MyObj* objs, FbxNode* pNode, int index);
 	void DisplayPolygons(MyObj* objs, FbxMesh* pMesh, int index);
+	void LoadBones(FbxNode* node, int idx, int parentIdx);
+	void LoadAnimationData(FbxMesh* mesh);
+	int FindBoneIndex(string name);
+	FbxAMatrix GetTransform(FbxNode* node);
+	void LoadBoneWeight(FbxCluster* cluster, int boneIdx);
+	void LoadOffsetMatrix(FbxCluster* cluster, const FbxAMatrix& matNodeTransform, int boneIdx);
+	void LoadKeyframe(int animIndex, FbxNode* node, FbxCluster* cluster, const FbxAMatrix& matNodeTransform, int boneIdx);
+	void LoadAnimationInfo();
+	void UpdateSkinnedCBs(const GameTimer& gt);
 
 	//통신
 	void ConnectServer();
@@ -259,11 +408,18 @@ private:
 
 	//fbx
 	FbxManager* mFbxManager = nullptr;
-	FbxScene* mFbxScene = nullptr;
+	FbxScene* lScene;
 	FbxNode* mFbxNode = nullptr;
 	FbxMesh* mFbxMesh = nullptr;
 	FbxIOSettings* mFbxIOSet = nullptr;
 	FbxVector4* mPos = nullptr;
+	vector<shared_ptr<FbxBoneInfo>>		_bones;
+	vector<BoneWeight>					_boneWeights; // 뼈 가중치
+	FbxArray<FbxString*>				_animNames;
+	vector<shared_ptr<FbxAnimClipInfo>>	_animClips;
+	std::unique_ptr<SkinnedModelInstance> mSkinnedModelInst;
+	//SkinnedData mSkinnedInfo;
+	XMFLOAT4X4 GetMatrix(FbxAMatrix& matrix);
 
 	//통신
 	sf::TcpSocket mSocket;

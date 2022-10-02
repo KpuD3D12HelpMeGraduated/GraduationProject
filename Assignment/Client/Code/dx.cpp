@@ -5,6 +5,161 @@
 #define IOS_REF (*(pManager->GetIOSettings()))
 #endif
 
+float BoneAnimation::GetStartTime()const
+{
+	return Keyframes.front().TimePos;
+}
+
+void BoneAnimation::Interpolate(float t, XMFLOAT4X4& M)const
+{
+	if (t <= Keyframes.front().TimePos)
+	{
+		XMVECTOR S = XMLoadFloat3(&Keyframes.front().Scale);
+		XMVECTOR P = XMLoadFloat3(&Keyframes.front().Translation);
+		XMVECTOR Q = XMLoadFloat4(&Keyframes.front().RotationQuat);
+
+		XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		XMStoreFloat4x4(&M, XMMatrixAffineTransformation(S, zero, Q, P));
+	}
+	else if (t >= Keyframes.back().TimePos)
+	{
+		XMVECTOR S = XMLoadFloat3(&Keyframes.back().Scale);
+		XMVECTOR P = XMLoadFloat3(&Keyframes.back().Translation);
+		XMVECTOR Q = XMLoadFloat4(&Keyframes.back().RotationQuat);
+
+		XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+		XMStoreFloat4x4(&M, XMMatrixAffineTransformation(S, zero, Q, P));
+	}
+	else
+	{
+		for (UINT i = 0; i < Keyframes.size() - 1; ++i)
+		{
+			if (t >= Keyframes[i].TimePos && t <= Keyframes[i + 1].TimePos)
+			{
+				float lerpPercent = (t - Keyframes[i].TimePos) / (Keyframes[i + 1].TimePos - Keyframes[i].TimePos);
+
+				XMVECTOR s0 = XMLoadFloat3(&Keyframes[i].Scale);
+				XMVECTOR s1 = XMLoadFloat3(&Keyframes[i + 1].Scale);
+
+				XMVECTOR p0 = XMLoadFloat3(&Keyframes[i].Translation);
+				XMVECTOR p1 = XMLoadFloat3(&Keyframes[i + 1].Translation);
+
+				XMVECTOR q0 = XMLoadFloat4(&Keyframes[i].RotationQuat);
+				XMVECTOR q1 = XMLoadFloat4(&Keyframes[i + 1].RotationQuat);
+
+				XMVECTOR S = XMVectorLerp(s0, s1, lerpPercent);
+				XMVECTOR P = XMVectorLerp(p0, p1, lerpPercent);
+				XMVECTOR Q = XMQuaternionSlerp(q0, q1, lerpPercent);
+
+				XMVECTOR zero = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+				XMStoreFloat4x4(&M, XMMatrixAffineTransformation(S, zero, Q, P));
+
+				break;
+			}
+		}
+	}
+}
+
+float BoneAnimation::GetEndTime()const
+{
+	float f = Keyframes.back().TimePos;
+
+	return f;
+}
+
+float AnimationClip::GetClipStartTime()const
+{
+	float t = MathHelper::Infinity;
+	for (UINT i = 0; i < BoneAnimations.size(); ++i)
+	{
+		t = MathHelper::Min(t, BoneAnimations[i].GetStartTime());
+	}
+
+	return t;
+}
+
+float AnimationClip::GetClipEndTime()const
+{
+	float t = 0.0f;
+	for (UINT i = 0; i < BoneAnimations.size(); ++i)
+	{
+		t = MathHelper::Max(t, BoneAnimations[i].GetEndTime());
+	}
+
+	return t;
+}
+
+void AnimationClip::Interpolate(float t, std::vector<XMFLOAT4X4>& boneTransforms)const
+{
+	for (UINT i = 0; i < BoneAnimations.size(); ++i)
+	{
+		BoneAnimations[i].Interpolate(t, boneTransforms[i]);
+	}
+}
+
+float SkinnedData::GetClipStartTime(const std::string& clipName)const
+{
+	auto clip = mAnimations.find(clipName);
+	return clip->second.GetClipStartTime();
+}
+
+float SkinnedData::GetClipEndTime(const std::string& clipName)const
+{
+	auto clip = mAnimations.find(clipName);
+	return clip->second.GetClipEndTime();
+}
+
+UINT SkinnedData::BoneCount()const
+{
+	return mBoneHierarchy.size();
+}
+
+void SkinnedData::GetFinalTransforms(const std::string& clipName, float timePos, std::vector<XMFLOAT4X4>& finalTransforms)const
+{
+	UINT numBones = mBoneOffsets.size();
+
+	std::vector<XMFLOAT4X4> toParentTransforms(numBones);
+
+	auto clip = mAnimations.find(clipName);
+	clip->second.Interpolate(timePos, toParentTransforms);
+
+	std::vector<XMFLOAT4X4> toRootTransforms(numBones);
+
+	toRootTransforms[0] = toParentTransforms[0];
+
+	for (UINT i = 1; i < numBones; ++i)
+	{
+		XMMATRIX toParent = XMLoadFloat4x4(&toParentTransforms[i]);
+
+		int parentIndex = mBoneHierarchy[i];
+		XMMATRIX parentToRoot = XMLoadFloat4x4(&toRootTransforms[parentIndex]);
+
+		XMMATRIX toRoot = XMMatrixMultiply(toParent, parentToRoot);
+
+		XMStoreFloat4x4(&toRootTransforms[i], toRoot);
+	}
+
+	for (UINT i = 0; i < numBones; ++i)
+	{
+		XMMATRIX offset = XMLoadFloat4x4(&mBoneOffsets[i]);
+		XMMATRIX toRoot = XMLoadFloat4x4(&toRootTransforms[i]);
+		XMMATRIX finalTransform = XMMatrixMultiply(offset, toRoot);
+		XMStoreFloat4x4(&finalTransforms[i], XMMatrixTranspose(finalTransform));
+	}
+}
+
+wstring s2ws(const string& s)
+{
+	int len;
+	int slength = static_cast<int>(s.length()) + 1;
+	len = ::MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0);
+	wchar_t* buf = new wchar_t[len];
+	::MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
+	wstring ret(buf);
+	delete[] buf;
+	return ret;
+}
+
 UINT CalcConstantBufferByteSize(UINT byteSize)
 {
 	return (byteSize + 255) & ~255;
@@ -832,12 +987,14 @@ void DX::BuildShadersAndInputLayout()
 
 void DX::BuildBoxGeometry(MyObj* objs, MyObj myObj, int index)
 {
+	mSkinnedModelInst = std::make_unique<SkinnedModelInstance>();
+
 	FbxManager* lSdkManager = FbxManager::Create();
 	FbxIOSettings* ios = FbxIOSettings::Create(lSdkManager, IOSROOT);
 	lSdkManager->SetIOSettings(ios);
 	FbxString lPath = FbxGetApplicationDirectory();
 	lSdkManager->LoadPluginsDirectory(lPath.Buffer());
-	FbxScene* lScene = FbxScene::Create(lSdkManager, myObj.mSceneName);
+	lScene = FbxScene::Create(lSdkManager, myObj.mSceneName);
 	bool lResult;
 
 	lResult = LoadScene(lSdkManager, lScene, myObj.mFbxFilePath);
@@ -846,7 +1003,24 @@ void DX::BuildBoxGeometry(MyObj* objs, MyObj myObj, int index)
 	FbxGeometryConverter geoConverter(lSdkManager);
 	geoConverter.Triangulate(lScene, true);
 
+	LoadBones(lScene->GetRootNode(), 0, -1);
+	LoadAnimationInfo();
+
+	mSkinnedModelInst->mAnimations.resize(_animNames.Size());
+	for (int i = 0; i < _animNames.Size(); i++) {
+		mSkinnedModelInst->mAnimations[i].BoneAnimations.resize(mSkinnedModelInst->mBoneHierarchy.size());
+	}
+
 	DisplayContent(objs, lNode, index);
+
+	//std::unordered_map<std::string, AnimationClip> animations;
+
+
+	//mSkinnedInfo.Set(boneIndexToParentIndex, boneOffsets, animations);
+	//mSkinnedModelInst->SkinnedInfo = &mSkinnedInfo;
+	//mSkinnedModelInst->FinalTransforms.resize(mSkinnedModelInst->SkinnedInfo->mAnimations[0].BoneAnimations[0].Keyframes.size());
+	//mSkinnedModelInst->ClipName = "Take1";
+	//mSkinnedModelInst->TimePos = 0.0f;
 }
 
 void DX::BuildPSO()
@@ -1041,6 +1215,8 @@ void DX::DisplayPolygons(MyObj* objs, FbxMesh* pMesh, int index)
 	vector<Vertex> vertices;
 	vertices.resize(count);
 
+	_boneWeights.resize(count);
+
 	FbxVector4* controlPoints = pMesh->GetControlPoints();
 
 	for (int i = 0; i < count; i++)
@@ -1084,6 +1260,8 @@ void DX::DisplayPolygons(MyObj* objs, FbxMesh* pMesh, int index)
 		indices.push_back(arrIdx[2]);
 		indices.push_back(arrIdx[1]);
 	}
+
+	LoadAnimationData(pMesh);
 
 	const UINT vertexBufferByteSize = (UINT)vertices.size() * sizeof(Vertex);
 	const UINT indexBufferByteSize = (UINT)indices.size() * sizeof(uint32_t);
@@ -1412,4 +1590,228 @@ void DX::SendPacket(void* packet)
 	unsigned char* p = reinterpret_cast<unsigned char*>(packet);
 	size_t sent = 0;
 	mSocket.send(packet, p[0], sent);
+}
+
+void DX::LoadBones(FbxNode* node, int idx, int parentIdx)
+{
+	FbxNodeAttribute* attribute = node->GetNodeAttribute();
+
+	if (attribute && attribute->GetAttributeType() == FbxNodeAttribute::eSkeleton)
+	{
+		shared_ptr<FbxBoneInfo> bone = make_shared<FbxBoneInfo>();
+		bone->boneName = s2ws(node->GetName());
+		bone->parentIndex = parentIdx;
+		//
+		//
+		//
+		//
+		//
+		mSkinnedModelInst->mBoneHierarchy.push_back(parentIdx);
+		_bones.push_back(bone);
+	}
+
+	const int childCount = node->GetChildCount();
+	for (int i = 0; i < childCount; i++)
+		LoadBones(node->GetChild(i), static_cast<int>(_bones.size()), idx);
+}
+
+void DX::LoadAnimationData(FbxMesh* mesh)
+{
+	const int skinCount = mesh->GetDeformerCount(FbxDeformer::eSkin);
+
+	for (int i = 0; i < skinCount; i++)
+	{
+		FbxSkin* fbxSkin = static_cast<FbxSkin*>(mesh->GetDeformer(i, FbxDeformer::eSkin));
+
+		if (fbxSkin)
+		{
+			FbxSkin::EType type = fbxSkin->GetSkinningType();
+			if (FbxSkin::eRigid == type || FbxSkin::eLinear)
+			{
+				const int clusterCount = fbxSkin->GetClusterCount();
+				for (int j = 0; j < clusterCount; j++)
+				{
+					FbxCluster* cluster = fbxSkin->GetCluster(j);
+					if (cluster->GetLink() == nullptr)
+						continue;
+
+					int boneIdx = FindBoneIndex(cluster->GetLink()->GetName());
+					assert(boneIdx >= 0);
+
+					FbxAMatrix matNodeTransform = GetTransform(mesh->GetNode());
+					LoadBoneWeight(cluster, boneIdx);
+					LoadOffsetMatrix(cluster, matNodeTransform, boneIdx);
+
+					const int animCount = _animNames.Size();
+					for (int k = 0; k < animCount; k++) {
+						LoadKeyframe(k, mesh->GetNode(), cluster, matNodeTransform, boneIdx);
+					}
+				}
+			}
+		}
+	}
+}
+
+int DX::FindBoneIndex(string name)
+{
+	wstring boneName = wstring(name.begin(), name.end());
+
+	for (UINT i = 0; i < _bones.size(); ++i)
+	{
+		if (_bones[i]->boneName == boneName)
+			return i;
+	}
+
+	return -1;
+}
+
+FbxAMatrix DX::GetTransform(FbxNode* node)
+{
+	const FbxVector4 translation = node->GetGeometricTranslation(FbxNode::eSourcePivot);
+	const FbxVector4 rotation = node->GetGeometricRotation(FbxNode::eSourcePivot);
+	const FbxVector4 scaling = node->GetGeometricScaling(FbxNode::eSourcePivot);
+	return FbxAMatrix(translation, rotation, scaling);
+}
+
+void DX::LoadBoneWeight(FbxCluster* cluster, int boneIdx)
+{
+	const int indicesCount = cluster->GetControlPointIndicesCount();
+	for (int i = 0; i < indicesCount; i++)
+	{
+		double weight = cluster->GetControlPointWeights()[i];
+		int vtxIdx = cluster->GetControlPointIndices()[i];
+		_boneWeights[vtxIdx].AddWeights(boneIdx, weight);
+	}
+}
+
+void DX::LoadOffsetMatrix(FbxCluster* cluster, const FbxAMatrix& matNodeTransform, int boneIdx)
+{
+	FbxAMatrix matClusterTrans;
+	FbxAMatrix matClusterLinkTrans;
+	cluster->GetTransformMatrix(matClusterTrans);
+	cluster->GetTransformLinkMatrix(matClusterLinkTrans);
+
+	FbxVector4 V0 = { 1, 0, 0, 0 };
+	FbxVector4 V1 = { 0, 0, 1, 0 };
+	FbxVector4 V2 = { 0, 1, 0, 0 };
+	FbxVector4 V3 = { 0, 0, 0, 1 };
+
+	FbxAMatrix matReflect;
+	matReflect[0] = V0;
+	matReflect[1] = V1;
+	matReflect[2] = V2;
+	matReflect[3] = V3;
+
+	FbxAMatrix matOffset;
+	matOffset = matClusterLinkTrans.Inverse() * matClusterTrans;
+	matOffset = matReflect * matOffset * matReflect;
+
+	_bones[boneIdx]->matOffset = matOffset.Transpose();
+
+	mSkinnedModelInst->mBoneOffsets.push_back(GetMatrix(matOffset.Transpose()));
+}
+
+void DX::LoadKeyframe(int animIndex, FbxNode* node, FbxCluster* cluster, const FbxAMatrix& matNodeTransform, int boneIdx)
+{
+	FbxVector4	v1 = { 1, 0, 0, 0 };
+	FbxVector4	v2 = { 0, 0, 1, 0 };
+	FbxVector4	v3 = { 0, 1, 0, 0 };
+	FbxVector4	v4 = { 0, 0, 0, 1 };
+	FbxAMatrix	matReflect;
+	matReflect.mData[0] = v1;
+	matReflect.mData[1] = v2;
+	matReflect.mData[2] = v3;
+	matReflect.mData[3] = v4;
+
+	FbxTime::EMode timeMode = lScene->GetGlobalSettings().GetTimeMode();
+
+	FbxAnimStack* animStack = lScene->FindMember<FbxAnimStack>(_animNames[animIndex]->Buffer());
+	lScene->SetCurrentAnimationStack(OUT animStack);
+
+	FbxLongLong startFrame = _animClips[animIndex]->startTime.GetFrameCount(timeMode);
+	FbxLongLong endFrame = _animClips[animIndex]->endTime.GetFrameCount(timeMode);
+
+	for (FbxLongLong frame = startFrame; frame < endFrame; frame++)
+	{
+		FbxKeyFrameInfo keyFrameInfo = {};
+		FbxTime fbxTime = 0;
+
+		fbxTime.SetFrame(frame, timeMode);
+
+		FbxAMatrix matFromNode = node->EvaluateGlobalTransform(fbxTime);
+		FbxAMatrix matTransform = matFromNode.Inverse() * cluster->GetLink()->EvaluateGlobalTransform(fbxTime);
+		matTransform = matReflect * matTransform * matReflect;
+
+		keyFrameInfo.time = fbxTime.GetSecondDouble();
+		keyFrameInfo.matTransform = matTransform;
+
+		Keyframe keyFrame;
+
+		//kfInfo.frame = static_cast<int>(size);
+		keyFrame.TimePos = (float)fbxTime.GetSecondDouble();
+		keyFrame.Scale.x = static_cast<float>(matTransform.GetS().mData[0]);
+		keyFrame.Scale.y = static_cast<float>(matTransform.GetS().mData[1]);
+		keyFrame.Scale.z = static_cast<float>(matTransform.GetS().mData[2]);
+		keyFrame.RotationQuat.x = static_cast<float>(matTransform.GetQ().mData[0]);
+		keyFrame.RotationQuat.y = static_cast<float>(matTransform.GetQ().mData[1]);
+		keyFrame.RotationQuat.z = static_cast<float>(matTransform.GetQ().mData[2]);
+		keyFrame.RotationQuat.w = static_cast<float>(matTransform.GetQ().mData[3]);
+		keyFrame.Translation.x = static_cast<float>(matTransform.GetT().mData[0]);
+		keyFrame.Translation.y = static_cast<float>(matTransform.GetT().mData[1]);
+		keyFrame.Translation.z = static_cast<float>(matTransform.GetT().mData[2]);
+
+		printf_s("%f\n", keyFrame.TimePos);
+
+		mSkinnedModelInst->mAnimations[animIndex].BoneAnimations[boneIdx].Keyframes.push_back(keyFrame);
+
+		_animClips[animIndex]->keyFrames[boneIdx].push_back(keyFrameInfo);
+	}
+}
+
+void DX::LoadAnimationInfo()
+{
+	lScene->FillAnimStackNameArray(OUT _animNames);
+
+	const int animCount = _animNames.GetCount();
+	for (int i = 0; i < animCount; i++)
+	{
+		FbxAnimStack* animStack = lScene->FindMember<FbxAnimStack>(_animNames[i]->Buffer());
+		if (animStack == nullptr)
+			continue;
+
+		shared_ptr<FbxAnimClipInfo> animClip = make_shared<FbxAnimClipInfo>();
+		animClip->name = s2ws(animStack->GetName());
+		animClip->keyFrames.resize(_bones.size());
+
+		FbxTakeInfo* takeInfo = lScene->GetTakeInfo(animStack->GetName());
+		animClip->startTime = takeInfo->mLocalTimeSpan.GetStart();
+		animClip->endTime = takeInfo->mLocalTimeSpan.GetStop();
+		animClip->mode = lScene->GetGlobalSettings().GetTimeMode();
+
+		_animClips.push_back(animClip);
+	}
+}
+
+void DX::UpdateSkinnedCBs(const GameTimer& gt)
+{
+	//auto currSkinnedCB = mCurrFrameResource->SkinnedCB.get();
+
+	// We only have one skinned model being animated.
+	//mSkinnedModelInst->UpdateSkinnedAnimation(gt.DeltaTime());
+
+	SkinnedConstants skinnedConstants;
+	//std::copy(std::begin(mSkinnedModelInst->FinalTransforms), std::end(mSkinnedModelInst->FinalTransforms), &skinnedConstants.BoneTransforms[0]);
+
+	//currSkinnedCB->CopyData(0, skinnedConstants);
+}
+
+XMFLOAT4X4 DX::GetMatrix(FbxAMatrix& matrix)
+{
+	XMFLOAT4X4 mat;
+
+	for (int y = 0; y < 4; ++y)
+		for (int x = 0; x < 4; ++x)
+			mat.m[y][x] = static_cast<float>(matrix.Get(y, x));
+
+	return mat;
 }

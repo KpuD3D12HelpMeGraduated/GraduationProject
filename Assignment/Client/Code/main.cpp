@@ -6,7 +6,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE prevInstance, PSTR cmdLine, in
 {
 	DX theApp(hInstance);
 
-	MyObj character({ 1.0f, 1.0f, 1.0f }, { 0.0f, XM_PI, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, L"Resource/Textures/AnimeCharcter.dds", "Resource/Models/AnimeCharacter.fbx");
+	MyObj character({ 0.05f, 0.05f, 0.05f }, { 0.0f, XM_PI, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, L"Resource/Textures/RobotColor.dds", "Resource/Models/Dragon.fbx");
 	MyObj player1({ 0.05f, 0.05f, 0.05f }, { 0.0f, XM_PI, 0.0f }, { -5.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, L"Resource/Textures/RobotColor.dds", "Resource/Models/Dragon.fbx");
 	MyObj player2({ 0.05f, 0.05f, 0.05f }, { 0.0f, XM_PI, 0.0f }, { 5.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, L"Resource/Textures/RobotColor.dds", "Resource/Models/Dragon.fbx");
 	MyObj player3({ 0.05f, 0.05f, 0.05f }, { 0.0f, XM_PI, 0.0f }, { 5.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f }, L"Resource/Textures/RobotColor.dds", "Resource/Models/Dragon.fbx");
