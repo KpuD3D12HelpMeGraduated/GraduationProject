@@ -1,0 +1,154 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Util">
+      <UniqueIdentifier>{60a77fc6-6e75-41cb-9982-81a7fb8ea7b5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DxEngine">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Client">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="DxEngine\장치 초기화">
+      <UniqueIdentifier>{102d4326-9dc9-4220-b676-6e3258f1290d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29">
+      <UniqueIdentifier>{06c650d5-f954-47b3-8cad-092fbeeaa9b3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DxEngine\텍스처">
+      <UniqueIdentifier>{f259c10f-0c6e-4bb9-af46-0bc89ab4d01a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DxEngine\NetWork">
+      <UniqueIdentifier>{48174b3b-bff6-4478-8a49-ab4463ce5d1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DxEngine\DSV">
+      <UniqueIdentifier>{51a9def4-c21d-4cbb-beb9-4d41558485c6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DxEngine\Camera">
+      <UniqueIdentifier>{a5e3dbce-3169-428c-b07b-7ba45f9cdf95}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="DxEngine.cpp">
+      <Filter>DxEngine</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Client</Filter>
+    </ClCompile>
+    <ClCompile Include="CmdQueue.cpp">
+      <Filter>DxEngine\장치 초기화</Filter>
+    </ClCompile>
+    <ClCompile Include="ConstantBuffer.cpp">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClCompile>
+    <ClCompile Include="DescHeap.cpp">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClCompile>
+    <ClCompile Include="Device.cpp">
+      <Filter>DxEngine\장치 초기화</Filter>
+    </ClCompile>
+    <ClCompile Include="IndexBuffer.cpp">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClCompile>
+    <ClCompile Include="PSO.cpp">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClCompile>
+    <ClCompile Include="RootSignature.cpp">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClCompile>
+    <ClCompile Include="RTV.cpp">
+      <Filter>DxEngine\장치 초기화</Filter>
+    </ClCompile>
+    <ClCompile Include="SwapChain.cpp">
+      <Filter>DxEngine\장치 초기화</Filter>
+    </ClCompile>
+    <ClCompile Include="VertexBuffer.cpp">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClCompile>
+    <ClCompile Include="Texture.cpp">
+      <Filter>DxEngine\텍스처</Filter>
+    </ClCompile>
+    <ClCompile Include="NetWork_Client.cpp">
+      <Filter>DxEngine\NetWork</Filter>
+    </ClCompile>
+    <ClCompile Include="DSV.cpp">
+      <Filter>DxEngine\DSV</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Util.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="d3dx12.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectXTex.h">
+      <Filter>Util</Filter>
+    </ClInclude>
+    <ClInclude Include="DxEngine.h">
+      <Filter>DxEngine</Filter>
+    </ClInclude>
+    <ClInclude Include="CmdQueue.h">
+      <Filter>DxEngine\장치 초기화</Filter>
+    </ClInclude>
+    <ClInclude Include="ConstantBuffer.h">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClInclude>
+    <ClInclude Include="DescHeap.h">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClInclude>
+    <ClInclude Include="Device.h">
+      <Filter>DxEngine\장치 초기화</Filter>
+    </ClInclude>
+    <ClInclude Include="IndexBuffer.h">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClInclude>
+    <ClInclude Include="PSO.h">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClInclude>
+    <ClInclude Include="RootSignature.h">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClInclude>
+    <ClInclude Include="RTV.h">
+      <Filter>DxEngine\장치 초기화</Filter>
+    </ClInclude>
+    <ClInclude Include="SwapChain.h">
+      <Filter>DxEngine\장치 초기화</Filter>
+    </ClInclude>
+    <ClInclude Include="VertexBuffer.h">
+      <Filter>DxEngine\메쉬%28정점버퍼, 인덱스버퍼, 상수버퍼%29</Filter>
+    </ClInclude>
+    <ClInclude Include="Texture.h">
+      <Filter>DxEngine\텍스처</Filter>
+    </ClInclude>
+    <ClInclude Include="Client.h">
+      <Filter>Client</Filter>
+    </ClInclude>
+    <ClInclude Include="NetWork_Client.h">
+      <Filter>DxEngine\NetWork</Filter>
+    </ClInclude>
+    <ClInclude Include="DSV.h">
+      <Filter>DxEngine\DSV</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera.h">
+      <Filter>DxEngine\Camera</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="..\Shader.hlsl">
+      <Filter>리소스 파일</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="DirectXTex.inl">
+      <Filter>Util</Filter>
+    </None>
+  </ItemGroup>
+</Project>
