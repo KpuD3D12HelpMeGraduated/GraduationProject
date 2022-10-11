@@ -34,6 +34,9 @@
     <Filter Include="DxEngine\Camera">
       <UniqueIdentifier>{a5e3dbce-3169-428c-b07b-7ba45f9cdf95}</UniqueIdentifier>
     </Filter>
+    <Filter Include="DxEngine\skinningAnimation">
+      <UniqueIdentifier>{26f14cbd-1c69-4233-b961-eff6b78b8090}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DxEngine.cpp">
