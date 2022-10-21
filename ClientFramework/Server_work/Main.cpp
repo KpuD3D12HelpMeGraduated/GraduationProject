@@ -7,6 +7,7 @@
 #include <unordered_set>
 #include <windows.h>
 #include <string>
+#include <queue>
 
 #include "protocol.h"
 #include "Over_EXP.h"
@@ -20,9 +21,84 @@ using namespace std;
 HANDLE g_h_iocp;
 SOCKET g_s_socket;
 
-array<SESSION, MAX_USER> clients;
+array<SESSION, MAX_USER + NPC_NUM> clients;
 
 void disconnect(int c_id);
+
+enum EVENT_TYPE { EV_MOVE };
+
+struct TIMER_EVENT {
+	int object_id;
+	EVENT_TYPE ev;
+	chrono::system_clock::time_point act_time;
+	int target_id;
+
+	constexpr bool operator < (const TIMER_EVENT& _Left) const
+	{
+		return (act_time > _Left.act_time);
+	}
+
+};
+
+priority_queue<TIMER_EVENT> timer_queue;
+mutex timer_l;
+
+void add_timer(int obj_id, int act_time, EVENT_TYPE e_type, int target_id)
+{
+	using namespace chrono;
+	TIMER_EVENT ev;
+	ev.act_time = system_clock::now() + milliseconds(act_time);
+	ev.object_id = obj_id;
+	ev.ev = e_type;
+	ev.target_id = target_id;
+
+	timer_l.lock();
+	timer_queue.push(ev);
+	timer_l.unlock();
+}
+
+void do_timer()
+{
+	while (true)
+	{
+		this_thread::sleep_for(1ms);
+		while (true)
+		{
+			timer_l.lock();
+
+			if (timer_queue.empty() == true)
+			{
+				timer_l.unlock();
+				break;
+			}
+
+			if (timer_queue.top().act_time > chrono::system_clock::now())
+			{
+				timer_l.unlock();
+				break;
+			}
+
+			TIMER_EVENT ev = timer_queue.top();
+			timer_queue.pop();
+			timer_l.unlock();
+
+			switch (ev.ev)
+			{
+			case EV_MOVE:
+			{
+				auto ex_over = new OVER_EXP;
+				ex_over->_comp_type = OP_NPC_MOVE;
+				ex_over->target_id = ev.object_id;
+				PostQueuedCompletionStatus(g_h_iocp, 1, ev.target_id, &ex_over->_over);
+				add_timer(ev.object_id, 1000, ev.ev, ev.target_id);
+				break;
+			}
+			default:
+				break;
+			}
+		}
+	}
+}
 
 int get_new_client_id()
 {
@@ -79,6 +155,10 @@ void process_packet(int c_id, char* packet)
 			pl._sl.unlock();
 		}
 
+		for (int i = MAX_USER; i < MAX_USER + NPC_NUM; i++) {
+			clients[c_id].send_add_object(i, clients[i].x, clients[i].y, clients[i].z, clients[i].degree, 0);
+		}
+
 		break;
 	}
 	case CS_MOVE: {
@@ -129,6 +209,24 @@ void process_packet(int c_id, char* packet)
 		}
 		break;
 	}
+	}
+}
+
+void move_npc(int npc_id)
+{
+	float z = clients[npc_id].z;
+
+	if (clients[npc_id].chn == true) z++;
+	else z--;
+
+	if (z >= 10) clients[npc_id].chn = false;
+	else if (z <= -10) clients[npc_id].chn = true;
+
+	clients[npc_id].z = z;
+
+	for (int i = 0; i < MAX_USER; ++i) {
+		auto& pl = clients;
+		pl[i].send_move_packet(npc_id, clients[npc_id].x, clients[npc_id].y, clients[npc_id].z, clients[npc_id].degree);
 	}
 }
 
@@ -225,12 +323,30 @@ void do_worker()
 			if (0 == num_bytes) disconnect(client_id);
 			delete ex_over;
 			break;
+		case OP_NPC_MOVE:
+		{
+			move_npc(ex_over->target_id);
+			delete ex_over;
+			break;
 		}
+		}
+	}
+}
+
+void initialize_npc()
+{
+	for (int i = MAX_USER; i < MAX_USER + NPC_NUM; ++i) {
+		clients[i].x = 0;
+		clients[i].y = 0;
+		clients[i].z = 0;
+		clients[i].degree = 0;
+		add_timer(i, 1000, EV_MOVE, i);
 	}
 }
 
 int main()
 {
+	initialize_npc();
 	WSADATA WSAData;
 	WSAStartup(MAKEWORD(2, 2), &WSAData);
 	g_s_socket = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
@@ -256,6 +372,9 @@ int main()
 	vector <thread> worker_threads;
 	for (int i = 0; i < 6; ++i)
 		worker_threads.emplace_back(do_worker);
+
+	thread timer_thread{ do_timer };
+	timer_thread.join();
 
 	for (auto& th : worker_threads)
 		th.join();

@@ -19,6 +19,7 @@ public:
 	char	_name[NAME_SIZE];
 	int		_prev_remain;
 	std::mutex	_sl;
+	bool chn;
 public:
 	SESSION();
 	~SESSION();

@@ -4,6 +4,7 @@ constexpr int BUF_SIZE = 200;
 constexpr int NAME_SIZE = 20;
 
 constexpr int MAX_USER = 10;
+constexpr int NPC_NUM = 10;
 
 // Packet ID
 constexpr char CS_LOGIN = 0;
