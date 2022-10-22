@@ -76,7 +76,6 @@ public:
 		{
 			SC_LOGIN_OK_PACKET* packet = reinterpret_cast<SC_LOGIN_OK_PACKET*>(ptr);
 			myClientId = packet->id;
-			printf_s("%d\n", myClientId);
 			playerArr[myClientId].on = true;
 			playerArr[myClientId].transform.x = packet->x;
 			playerArr[myClientId].transform.y = packet->y;
@@ -95,6 +94,13 @@ public:
 				playerArr[id].transform.y = my_packet->y;
 				playerArr[id].transform.z = my_packet->z;
 			}
+			else if (id >= PLAYERMAX)
+			{
+				npcArr[id - PLAYERMAX].on = true;
+				npcArr[id - PLAYERMAX].transform.x = my_packet->x;
+				npcArr[id - PLAYERMAX].transform.y = my_packet->y;
+				npcArr[id - PLAYERMAX].transform.z = my_packet->z;
+			}
 
 			break;
 		}
@@ -102,10 +108,20 @@ public:
 		{
 			SC_MOVE_OBJECT_PACKET* my_packet = reinterpret_cast<SC_MOVE_OBJECT_PACKET*>(ptr);
 			int id = my_packet->id;
-			playerArr[id].transform.x = my_packet->x;
-			playerArr[id].transform.y = my_packet->y;
-			playerArr[id].transform.z = my_packet->z;
-			//playerArr[id].rotate.y = my_packet->degree;
+			if (id < PLAYERMAX)
+			{
+				playerArr[id].transform.x = my_packet->x;
+				playerArr[id].transform.y = my_packet->y;
+				playerArr[id].transform.z = my_packet->z;
+				//playerArr[id].rotate.y = my_packet->degree;
+			}
+			else if (id >= PLAYERMAX)
+			{
+				npcArr[id - PLAYERMAX].transform.x = my_packet->x;
+				npcArr[id - PLAYERMAX].transform.y = my_packet->y;
+				npcArr[id - PLAYERMAX].transform.z = my_packet->z;
+			}
+			
 			break;
 		}
 		case SC_REMOVE_OBJECT:

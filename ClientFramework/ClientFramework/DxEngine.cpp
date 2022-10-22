@@ -124,24 +124,27 @@ void DxEngine::Draw()
 	
 	for (int i = 0; i < NPCMAX; i++)
 	{
+		if (npcArr[i].on == true)
 		{
-			//월드 변환
-			XMStoreFloat4x4(&vertexBufferPtr->_transform.world, XMMatrixScaling(0.2f, 0.2f, 0.2f) * XMMatrixTranslation(npcArr[i].transform.x, npcArr[i].transform.y, npcArr[i].transform.z));
-			XMMATRIX world = XMLoadFloat4x4(&vertexBufferPtr->_transform.world);
-			XMStoreFloat4x4(&vertexBufferPtr->_transform.world, XMMatrixTranspose(world));
-
-			//렌더
-			cmdQueuePtr->_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-			cmdQueuePtr->_cmdList->IASetVertexBuffers(0, 1, &vertexBufferPtr->_npcVertexBufferView);
-			cmdQueuePtr->_cmdList->IASetIndexBuffer(&indexBufferPtr->_npcIndexBufferView);
 			{
-				D3D12_CPU_DESCRIPTOR_HANDLE handle = constantBufferPtr->PushData(0, &vertexBufferPtr->_transform, sizeof(vertexBufferPtr->_transform));
-				descHeapPtr->SetCBV(handle, 0, devicePtr);
-				descHeapPtr->SetSRV(texturePtr->_srvHandle, 5, devicePtr);
-			}
+				//월드 변환
+				XMStoreFloat4x4(&vertexBufferPtr->_transform.world, XMMatrixScaling(0.2f, 0.2f, 0.2f) * XMMatrixTranslation(npcArr[i].transform.x, npcArr[i].transform.y, npcArr[i].transform.z));
+				XMMATRIX world = XMLoadFloat4x4(&vertexBufferPtr->_transform.world);
+				XMStoreFloat4x4(&vertexBufferPtr->_transform.world, XMMatrixTranspose(world));
 
-			descHeapPtr->CommitTable(cmdQueuePtr);
-			cmdQueuePtr->_cmdList->DrawIndexedInstanced(indexBufferPtr->_indexCount, 1, 0, 0, 0);
+				//렌더
+				cmdQueuePtr->_cmdList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+				cmdQueuePtr->_cmdList->IASetVertexBuffers(0, 1, &vertexBufferPtr->_npcVertexBufferView);
+				cmdQueuePtr->_cmdList->IASetIndexBuffer(&indexBufferPtr->_npcIndexBufferView);
+				{
+					D3D12_CPU_DESCRIPTOR_HANDLE handle = constantBufferPtr->PushData(0, &vertexBufferPtr->_transform, sizeof(vertexBufferPtr->_transform));
+					descHeapPtr->SetCBV(handle, 0, devicePtr);
+					descHeapPtr->SetSRV(texturePtr->_srvHandle, 5, devicePtr);
+				}
+
+				descHeapPtr->CommitTable(cmdQueuePtr);
+				cmdQueuePtr->_cmdList->DrawIndexedInstanced(indexBufferPtr->_indexCount, 1, 0, 0, 0);
+			}
 		}
 	}
 	

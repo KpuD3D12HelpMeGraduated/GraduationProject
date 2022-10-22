@@ -62,17 +62,17 @@ void do_timer()
 	while (true)
 	{
 		this_thread::sleep_for(1ms);
-		while (true)
+		while (true) 
 		{
 			timer_l.lock();
 
-			if (timer_queue.empty() == true)
+			if (timer_queue.empty() == true) 
 			{
 				timer_l.unlock();
 				break;
 			}
 
-			if (timer_queue.top().act_time > chrono::system_clock::now())
+			if (timer_queue.top().act_time > chrono::system_clock::now()) 
 			{
 				timer_l.unlock();
 				break;
@@ -84,17 +84,17 @@ void do_timer()
 
 			switch (ev.ev)
 			{
-			case EV_MOVE:
-			{
-				auto ex_over = new OVER_EXP;
-				ex_over->_comp_type = OP_NPC_MOVE;
-				ex_over->target_id = ev.object_id;
-				PostQueuedCompletionStatus(g_h_iocp, 1, ev.target_id, &ex_over->_over);
-				add_timer(ev.object_id, 1000, ev.ev, ev.target_id);
-				break;
-			}
-			default:
-				break;
+				case EV_MOVE: 
+				{
+					auto ex_over = new OVER_EXP;
+					ex_over->_comp_type = OP_NPC_MOVE;
+					ex_over->target_id = ev.object_id;
+					PostQueuedCompletionStatus(g_h_iocp, 1, ev.target_id, &ex_over->_over);
+					add_timer(ev.object_id, 100, ev.ev, ev.target_id);
+					break;
+				}
+				default:
+					break;
 			}
 		}
 	}
@@ -141,22 +141,19 @@ void process_packet(int c_id, char* packet)
 
 		for (int i = 0; i < MAX_USER; ++i) {
 			auto& pl = clients[i];
-			if (pl._id == c_id)
-				continue;
+			if (pl._id == c_id) continue;
 			pl._sl.lock();
 			if (ST_INGAME != pl._s_state) {
 				pl._sl.unlock();
 				continue;
 			}
-			//서버입장에서 클라추가시 로그인한 클라를 제외한 모든클라한테 로그인한 클라정보 전송 // c_id - 현재 접속한 클라아이디
 			pl.send_add_object(c_id, clients[c_id].x, clients[c_id].y, clients[c_id].z, clients[c_id].degree, clients[c_id]._name);
-			//서버입장에서 클라추가시 현재 접속한 클라한테만 다른 클라들에 대한 정보 전송
 			clients[c_id].send_add_object(pl._id, pl.x, pl.y, pl.z, pl.degree, pl._name);
 			pl._sl.unlock();
 		}
 
 		for (int i = MAX_USER; i < MAX_USER + NPC_NUM; i++) {
-			clients[c_id].send_add_object(i, clients[i].x, clients[i].y, clients[i].z, clients[i].degree, 0);
+			clients[c_id].send_add_object(i, clients[i].x, clients[i].y, clients[i].z, clients[i].degree, clients[i]._name);
 		}
 
 		break;
@@ -215,7 +212,7 @@ void process_packet(int c_id, char* packet)
 void move_npc(int npc_id)
 {
 	float z = clients[npc_id].z;
-
+	
 	if (clients[npc_id].chn == true) z++;
 	else z--;
 
@@ -224,7 +221,7 @@ void move_npc(int npc_id)
 
 	clients[npc_id].z = z;
 
-	for (int i = 0; i < MAX_USER; ++i) {
+	for (int i = 0; i < MAX_USER;++i) {
 		auto& pl = clients;
 		pl[i].send_move_packet(npc_id, clients[npc_id].x, clients[npc_id].y, clients[npc_id].z, clients[npc_id].degree);
 	}
@@ -323,6 +320,7 @@ void do_worker()
 			if (0 == num_bytes) disconnect(client_id);
 			delete ex_over;
 			break;
+
 		case OP_NPC_MOVE:
 		{
 			move_npc(ex_over->target_id);
@@ -336,11 +334,15 @@ void do_worker()
 void initialize_npc()
 {
 	for (int i = MAX_USER; i < MAX_USER + NPC_NUM; ++i) {
-		clients[i].x = 0;
+		clients[i]._s_state = ST_INGAME;
+		clients[i].x = (i - 10) * 1.5;
 		clients[i].y = 0;
 		clients[i].z = 0;
 		clients[i].degree = 0;
-		add_timer(i, 1000, EV_MOVE, i);
+		clients[i].chn = true;
+		clients[i]._name[0] = 0;
+		clients[i]._prev_remain = 0;
+		add_timer(i, 100, EV_MOVE, i);
 	}
 }
 

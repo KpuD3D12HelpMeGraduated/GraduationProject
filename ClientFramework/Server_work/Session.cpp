@@ -11,6 +11,7 @@ SESSION::SESSION()
 	_name[0] = 0;
 	_s_state = ST_FREE;
 	_prev_remain = 0;
+	chn = true;
 }
 
 SESSION::~SESSION()
@@ -54,7 +55,6 @@ void SESSION::send_move_packet(int c_id, float x, float y, float z, float degree
 	p.x = x;
 	p.y = y;
 	p.z = z;
-	p.degree = degree;
 	do_send(&p);
 }
 

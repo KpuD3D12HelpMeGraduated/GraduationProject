@@ -19,6 +19,7 @@ public:
 	char	_name[NAME_SIZE];
 	int		_prev_remain;
 	std::mutex	_sl;
+	// 과제용 임시 변수
 	bool chn;
 public:
 	SESSION();
